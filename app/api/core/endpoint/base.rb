@@ -24,25 +24,15 @@ class Core::Endpoint::Base
       include Core::Endpoint::BasicHandler::Paged
 
       def _read(request, _)
-        page    = request.path.first.try(:to_i) || 1
-        results = page_of_results(request.io.eager_loading_for(request.target).include_uuid, page, request.target)
-        results.singleton_class.send(:define_method, :model) { request.target }
-        yield(self, results)
+        request.target.send(:with_scope, :find => { :order => 'id ASC' }) do
+          page    = request.path.first.try(:to_i) || 1
+          results = page_of_results(request.io.eager_loading_for(request.target).include_uuid, page, request.target)
+          results.singleton_class.send(:define_method, :model) { request.target }
+          yield(self, results)
+        end
       end
       private :_read
       standard_action(:read)
-
-      def as_json(options = {})
-        response = options[:response]
-        super.tap do |json|
-          action_updates_for(options) { |updates| json['actions'].merge!(updates) }
-          unless response.request.target.nil?
-            model_io = ::Core::Io::Registry.instance.lookup(response.request.target)
-            handler  = endpoint_for_class(response.request.target).instance_handler
-            json[model_io.json_root.to_s.pluralize] = response.object.map { |o| handler.as_json(options.merge(:target => o)) }
-          end
-        end
-      end
     end
 
     def self.extended(base)

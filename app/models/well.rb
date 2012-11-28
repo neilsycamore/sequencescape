@@ -7,6 +7,20 @@ class Well < Aliquot::Receptacle
   include StudyReport::WellDetails
   include Tag::Associations
 
+  class Link < ActiveRecord::Base
+    set_table_name('well_links')
+    set_inheritance_column(nil)
+    belongs_to :target_well, :class_name => 'Well'
+    belongs_to :source_well, :class_name => 'Well'
+  end
+  has_many :stock_well_links, :class_name => 'Well::Link', :foreign_key => :target_well_id, :conditions => { :type => 'stock' }
+  has_many :stock_wells, :through => :stock_well_links, :source => :source_well do
+    def attach!(wells)
+      proxy_owner.stock_well_links.build(wells.map { |well| { :type => 'stock', :source_well => well } }).map(&:save!)
+    end
+  end
+  named_scope :include_stock_wells, { :include => { :stock_wells => :requests_as_source } }
+
   named_scope :located_at, lambda { |plate, location|
     { :joins => :map, :conditions => { :maps => { :description => location, :asset_size => plate.size } } }
   }
@@ -16,20 +30,22 @@ class Well < Aliquot::Receptacle
   contained_by :plate
   delegate :location, :to => :container , :allow_nil => true
   @@per_page = 500
-  has_one :well_attribute
+
+  has_one :well_attribute, :inverse_of => :well
+  after_create { |w| w.create_well_attribute unless w.well_attribute.present? }
 
   named_scope :pooled_as_target_by, lambda { |type|
     {
-      :joins      => 'LEFT JOIN requests ON assets.id=target_asset_id',
-      :conditions => [ '(requests.sti_type IS NULL OR requests.sti_type IN (?))', [ type, *Class.subclasses_of(type) ].map(&:name) ],
-      :select     => 'assets.*, submission_id AS pool_id'
+      :joins      => 'LEFT JOIN requests patb ON assets.id=patb.target_asset_id',
+      :conditions => [ '(patb.sti_type IS NULL OR patb.sti_type IN (?))', [ type, *Class.subclasses_of(type) ].map(&:name) ],
+      :select     => 'assets.*, patb.submission_id AS pool_id'
     }
   }
   named_scope :pooled_as_source_by, lambda { |type|
     {
-      :joins      => 'LEFT JOIN requests ON assets.id=asset_id',
-      :conditions => [ '(requests.sti_type IS NULL OR requests.sti_type IN (?))', [ type, *Class.subclasses_of(type) ].map(&:name) ],
-      :select     => 'assets.*, submission_id AS pool_id'
+      :joins      => 'LEFT JOIN requests pasb ON assets.id=pasb.asset_id',
+      :conditions => [ '(pasb.sti_type IS NULL OR pasb.sti_type IN (?))', [ type, *Class.subclasses_of(type) ].map(&:name) ],
+      :select     => 'assets.*, pasb.submission_id AS pool_id'
     }
   }
   named_scope :in_column_major_order, { :joins => :map, :order => 'column_order ASC' }
@@ -37,22 +53,12 @@ class Well < Aliquot::Receptacle
   named_scope :in_inverse_column_major_order, { :joins => :map, :order => 'column_order DESC' }
   named_scope :in_inverse_row_major_order, { :joins => :map, :order => 'row_order DESC' }
 
-  after_create :create_well_attribute_if_not_exists
+  named_scope :in_plate_column, lambda {|col,size| {:joins => :map, :conditions => {:maps => {:description => Map.descriptions_for_column(col,size), :asset_size => size }}}}
+  named_scope :in_plate_row,    lambda {|row,size| {:joins => :map, :conditions => {:maps => {:description => Map.descriptions_for_row(row,size), :asset_size =>size }}}}
 
   named_scope :with_blank_samples, { :conditions => { :aliquots => { :samples => { :empty_supplier_sample_name => true } } }, :joins => { :aliquots => :sample } }
 
-  def stock_wells
-    wells_to_walk, stock_wells = [ self ], []
-    until wells_to_walk.empty?
-      current_well = wells_to_walk.shift or next
-      if current_well.plate.stock_plate?
-        stock_wells << current_well
-      else
-        wells_to_walk.concat(current_well.requests_as_target.where_is_a?(TransferRequest).map(&:asset))
-      end
-    end
-    stock_wells
-  end
+  include Transfer::WellHelpers
 
   class << self
     def delegate_to_well_attribute(attribute, options = {})
@@ -70,6 +76,10 @@ class Well < Aliquot::Receptacle
         end
       END_OF_METHOD_DEFINITION
     end
+  end
+
+  def generate_name(_)
+    # Do nothing
   end
 
   #hotfix
@@ -102,7 +112,7 @@ class Well < Aliquot::Receptacle
   writer_for_well_attribute_as_float(:picked_volume)
 
   delegate_to_well_attribute(:gender_markers)
-  
+
   def update_gender_markers!(gender_markers, resource)
     if self.well_attribute.gender_markers == gender_markers
       gender_marker_event = self.events.find_by_family('update_gender_markers', :order => 'id desc')
@@ -114,16 +124,16 @@ class Well < Aliquot::Receptacle
     else
       self.events.update_gender_markers!(resource)
     end
-    
+
     self.well_attribute.update_attributes!(:gender_markers => gender_markers)
   end
-  
+
   def update_sequenom_count!(sequenom_count, resource)
     unless self.well_attribute.sequenom_count == sequenom_count
       self.events.update_sequenom_count!(resource)
     end
     self.well_attribute.update_attributes!(:sequenom_count => sequenom_count)
-    
+
   end
 
   # The sequenom pass value is either the string 'Unknown' or it is the combination of gender marker values.
@@ -151,7 +161,7 @@ class Well < Aliquot::Receptacle
   end
 
   def create_child_sample_tube
-    SampleTube.create!(:map => self.map, :aliquots => aliquots.map(&:clone)).tap do |sample_tube|
+    Tube::Purpose.standard_sample_tube.create!(:map => self.map, :aliquots => aliquots.map(&:clone)).tap do |sample_tube|
       AssetLink.connect(self, sample_tube)
     end
   end
@@ -162,14 +172,6 @@ class Well < Aliquot::Receptacle
      :sequenom      => self.get_sequenom_pass,
      :concentration => self.get_concentration }
   end
-
-  def create_well_attribute_if_not_exists
-    unless self.well_attribute
-      self.well_attribute = WellAttribute.create
-      self.save!
-    end
-  end
-  private :create_well_attribute_if_not_exists
 
   def buffer_required?
     get_buffer_volume > 0.0
@@ -183,8 +185,11 @@ class Well < Aliquot::Receptacle
     nil
   end
 
+  validate(:on => :save) do |record|
+    record.errors.add(:name, "cannot be specified for a well") unless record.name.blank?
+  end
+
   def display_name
-    return self.name unless self.name.blank?
     plate_name = self.plate.present? ? self.plate.sanger_human_barcode : '(not on a plate)'
     "#{plate_name}:#{map ? map.description : ''}"
   end

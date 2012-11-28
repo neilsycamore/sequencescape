@@ -1,4 +1,4 @@
-module Accessionable 
+module Accessionable
   class Sample < Base
     attr_reader :common_name, :taxon_id, :links, :tags
     def initialize(sample)
@@ -39,7 +39,7 @@ module Accessionable
     def object_id
      @sample.id
     end
-    
+
     def xml
     xml = Builder::XmlMarkup.new
     xml.instruct!
@@ -66,8 +66,8 @@ module Accessionable
     end
 
     def update_accession_number!(user, accession_number)
-      add_updated_event(user, "Sample #{@sample.id}",  @sample) if @accession_number
       @accession_number = accession_number
+      add_updated_event(user, "Sample #{@sample.id}",  @sample) if @accession_number
       @sample.sample_metadata.sample_ebi_accession_number = accession_number
       @sample.save!
     end
@@ -75,6 +75,11 @@ module Accessionable
     def protect?(service)
       service.sample_visibility(@sample) == AccessionService::Protect
     end
+
+    def released?
+      @sample.released?
+    end
+
   end
   private
 

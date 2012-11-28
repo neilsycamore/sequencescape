@@ -1,7 +1,6 @@
 @javascript @barcode-service @cherrypicking @gwl
 Feature: The Tecan file has the wrong buffer volumes, defaulting to 13 total volume
-  
-  Background:
+  Scenario: volume of 65 is required
     Given I am a "administrator" user logged in as "user"
     Given I have a project called "Test project"
     And project "Test project" has enough quotas
@@ -22,20 +21,18 @@ Feature: The Tecan file has the wrong buffer volumes, defaulting to 13 total vol
     Given plate "1220000010734" has concentration and volume results
     Given plate "1220000001831" has concentration and volume results
     Given plate "1220000005877" has concentration and volume results
-  	When I follow "Start batch"
-  	When I select "testtemplate" from "Plate Template"
+    When I follow "Start batch"
+    When I select "testtemplate" from "Plate Template"
 
-
-  Scenario: volume of 65 is required
     When I fill in "Volume Required" with "65"
     When I press "Next step"
-  	When I press "Next step"
-  	When I select "Infinium 670k" from "Plate Purpose"
-  	And I press "Next step"
-  	When I select "Genotyping freezer" from "Location"
-  	And I press "Next step"
-  	When I press "Release this batch"
-  	Given the last batch has a barcode of "550000555760"
+    When I press "Next step"
+    When I select "Infinium 670k" from "Plate Purpose"
+    And I press "Next step"
+    When I select "Genotyping freezer" from "Location"
+    And I press "Next step"
+    When I press "Release this batch"
+    Given the last batch has a barcode of "550000555760"
     And user "user" has a user barcode of "ID41440E"
 
     Given I am on the robot verification page
@@ -58,67 +55,67 @@ Feature: The Tecan file has the wrong buffer volumes, defaulting to 13 total vol
     And I press "Check"
     Then I should see "Scan robot beds and plates"
     And the source plates should be sorted by bed:
-    | Bed    | Plate ID |
-    | SCRC 1 | 1        |
-    | SCRC 2 | 10       |
-    | SCRC 3 | 5        |
-    | DEST 1 | 99999    |
+    | Bed    | Plate ID      |
+    | SCRC 1 | 1220000001831 |
+    | SCRC 2 | 1220000010734 |
+    | SCRC 3 | 1220000005877 |
+    | DEST 1 | 1220099999705 |
 
     When I fill in the following:
-    | SCRC 1 | 4880000001780 |
-    | 1      | 1220000001831 |
-    | SCRC 2 | 4880000002794 |
-    | 5      | 1220000005877 |
-    | SCRC 3 | 4880000003807 |
-    | 10     | 1220000010734 |
-    | DEST 1 | 4880000020729 |
-    | 99999  | 1220099999705 |
+    | SCRC 1        | 4880000001780 |
+    | 1220000001831 | 1220000001831 |
+    | SCRC 2        | 4880000002794 |
+    | 1220000005877 | 1220000005877 |
+    | SCRC 3        | 4880000003807 |
+    | 1220000010734 | 1220000010734 |
+    | DEST 1        | 4880000020729 |
+    | 1220099999705 | 1220099999705 |
     And I press "Verify"
     Then I should see "Download TECAN file"
     Then the downloaded tecan file for batch "550000555760" and plate "1220099999705" is
     """
     C;
-    A;SCRC1;;ABgene 0765;1;;16.0
-    D;DEST1;;ABgene 0800;1;;16.0
+    A;1220000001831;;ABgene 0765;1;;16.0
+    D;1220099999705;;ABgene 0800;1;;16.0
     W;
-    A;SCRC1;;ABgene 0765;9;;16.0
-    D;DEST1;;ABgene 0800;2;;16.0
+    A;1220000001831;;ABgene 0765;9;;16.0
+    D;1220099999705;;ABgene 0800;2;;16.0
     W;
-    A;SCRC2;;ABgene 0765;1;;16.0
-    D;DEST1;;ABgene 0800;3;;16.0
+    A;1220000010734;;ABgene 0765;1;;16.0
+    D;1220099999705;;ABgene 0800;3;;16.0
     W;
-    A;SCRC2;;ABgene 0765;9;;16.0
-    D;DEST1;;ABgene 0800;4;;16.0
+    A;1220000010734;;ABgene 0765;9;;16.0
+    D;1220099999705;;ABgene 0800;4;;16.0
     W;
-    A;SCRC3;;ABgene 0765;1;;16.0
-    D;DEST1;;ABgene 0800;5;;16.0
+    A;1220000005877;;ABgene 0765;1;;16.0
+    D;1220099999705;;ABgene 0800;5;;16.0
     W;
-    A;SCRC3;;ABgene 0765;9;;16.0
-    D;DEST1;;ABgene 0800;6;;16.0
+    A;1220000005877;;ABgene 0765;9;;16.0
+    D;1220099999705;;ABgene 0800;6;;16.0
     W;
     C;
     A;BUFF;;96-TROUGH;1;;49.0
-    D;DEST1;;ABgene 0800;1;;49.0
+    D;1220099999705;;ABgene 0800;1;;49.0
     W;
     A;BUFF;;96-TROUGH;2;;49.0
-    D;DEST1;;ABgene 0800;2;;49.0
+    D;1220099999705;;ABgene 0800;2;;49.0
     W;
     A;BUFF;;96-TROUGH;3;;49.0
-    D;DEST1;;ABgene 0800;3;;49.0
+    D;1220099999705;;ABgene 0800;3;;49.0
     W;
     A;BUFF;;96-TROUGH;4;;49.0
-    D;DEST1;;ABgene 0800;4;;49.0
+    D;1220099999705;;ABgene 0800;4;;49.0
     W;
     A;BUFF;;96-TROUGH;5;;49.0
-    D;DEST1;;ABgene 0800;5;;49.0
+    D;1220099999705;;ABgene 0800;5;;49.0
     W;
     A;BUFF;;96-TROUGH;6;;49.0
-    D;DEST1;;ABgene 0800;6;;49.0
+    D;1220099999705;;ABgene 0800;6;;49.0
     W;
     C;
-    C; SCRC1 = 1
-    C; SCRC2 = 10
-    C; SCRC3 = 5
+    C; SCRC1 = 1220000001831
+    C; SCRC2 = 1220000010734
+    C; SCRC3 = 1220000005877
     C;
-    C; DEST1 = 99999
+    C; DEST1 = 1220099999705
     """

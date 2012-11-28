@@ -5,7 +5,7 @@ class ContainerAssociation < ActiveRecord::Base
   belongs_to :content , :class_name => "Asset"
 
   # NOTE: This was originally on the content asset but this causes massive performance issues.
-  # It causes the plate and it's metadata to be loaded for each well, which would be cached if 
+  # It causes the plate and it's metadata to be loaded for each well, which would be cached if
   # it were not for inserts/updates being performed.  I'm disabling this as it should be caught
   # in tests and we've not seen it in production.
   #
@@ -40,20 +40,26 @@ class ContainerAssociation < ActiveRecord::Base
               post_import(records.map { |r| [proxy_owner.id, r['id']] })
             end
           end
-
-          def attach(records)
-            ActiveRecord::Base.transaction do
-              links_data = records.map { |r| [proxy_owner.id, r['id']] }
-              ContainerAssociation.import([:container_id, :content_id], links_data, :validate => false)
-            end
-          end
         }, __FILE__, line)
+
+        def attach(records)
+          ActiveRecord::Base.transaction do
+            links_data = records.map { |r| [proxy_owner.id, r['id']] }
+            ContainerAssociation.import([:container_id, :content_id], links_data, :validate => false)
+          end
+        end
 
         # Sometimes we need to do things after importing the contained records.  This is the callback that should be
         # overridden by the block passed.
         def post_import(_)
           # Does nothing by default
         end
+
+        def connect(content)
+          ContainerAssociation.create!(:container => proxy_owner, :content => content)
+          post_connect(content)
+        end
+        private :connect
 
         class_eval(&block) if block_given?
       end

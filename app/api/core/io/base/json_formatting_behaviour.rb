@@ -3,7 +3,6 @@ module Core::Io::Base::JsonFormattingBehaviour
     base.class_eval do
       extend ::Core::Io::Base::JsonFormattingBehaviour::Input
       extend ::Core::Io::Base::JsonFormattingBehaviour::Output
-      extend ::Core::Io::Base::JsonFormattingBehaviour::Debug unless Rails.env == 'production'
 
       class_inheritable_reader :attribute_to_json_field
       write_inheritable_attribute(:attribute_to_json_field, {})
@@ -11,32 +10,18 @@ module Core::Io::Base::JsonFormattingBehaviour
     end
   end
 
-  module Debug
-    def as_json(options = nil, &block)
-      return super if options[:nested]
-      benchmark("I/O #{self.name}") { super }
-    end
-  end
-
+  # NOTE: This one is OK!
   def as_json(options = nil, &block)
-    options        ||= {}
-    object           = options.delete(:object)
-    uuids_to_ids     = options[:uuids_to_ids] || { }
-    object_content   = object_json(object, uuids_to_ids, options)
-
-    options[:nested] ? object_content : { self.json_root => object_content, :uuids_to_ids => uuids_to_ids }
+    options ||= {}
+    object    = options.delete(:object)
+    object_json(object, options)
   end
 
   #--
   # Very root level does absolutely nothing useful!
   #++
-  def object_json(object, uuids_to_ids, options)
-    {}
-  end
-  private :object_json
+  def object_json(*args)
 
-  def post_process(json)
-    # Does nothing, intentionally
   end
 
   def json_field_for(attribute)
@@ -81,7 +66,7 @@ module Core::Io::Base::JsonFormattingBehaviour
     StringIO.new(mapping).each_line do |line|
       next if line.blank? or line =~ /^\s*#/
       match = VALID_LINE_REGEXP.match(line) or raise StandardError, "Invalid line: #{line.inspect}"
-      attribute_to_json.push([ match[1], match[3] ]) if (match[2] =~ /<?=>/) 
+      attribute_to_json.push([ match[1], match[3] ]) if (match[2] =~ /<?=>/)
       json_to_attribute.push([ match[3], (match[2] =~ /<=>?/) ? match[1] : nil ])
     end
     yield(attribute_to_json, json_to_attribute)

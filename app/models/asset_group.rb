@@ -1,5 +1,5 @@
 class AssetGroup < ActiveRecord::Base
-  acts_as_audited :on => [:destroy, :update]
+
   include Uuid::Uuidable
   include ModelExtensions::AssetGroup
 
@@ -12,8 +12,8 @@ class AssetGroup < ActiveRecord::Base
 
   validates_presence_of :name, :study
   validates_uniqueness_of :name
-  
-  
+
+
 
   named_scope :for_search_query, lambda { |query| { :conditions => [ 'name LIKE ?', "%#{query}%" ] } }
 

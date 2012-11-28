@@ -23,6 +23,9 @@ module Tasks::CherrypickHandler
 
     setup_input_params_for_pass_through
 
+    @batch = Batch.find(params[:batch_id], :include => [:requests, :pipeline, :lab_events])
+    @requests = @batch.ordered_requests
+
     @plate_barcode = params[:existing_plate]
     @plate = nil
     unless @plate_barcode.blank?
@@ -34,10 +37,12 @@ module Tasks::CherrypickHandler
         redirect_to :action => 'stage', :batch_id => @batch.id, :workflow_id => @workflow.id, :id => (@stage -1).to_s
         return
       end
+
+      action_flash[:warning] = I18n.t("cherrypick.picking_by_row") if @plate.plate_purpose.cherrypick_in_rows?
     end
 
-    @batch = Batch.find(params[:batch_id], :include => [:requests, :pipeline, :lab_events])
-    @requests = @batch.ordered_requests
+    @plate_purpose = PlatePurpose.find(params[:plate_purpose_id])
+    action_flash[:warning] = I18n.t("cherrypick.picking_by_row") if @plate_purpose.cherrypick_in_rows?
 
     unless @batch.started? || @batch.failed?
       @batch.start!(current_user)
@@ -46,8 +51,10 @@ module Tasks::CherrypickHandler
     @workflow = LabInterface::Workflow.find(params[:workflow_id], :include => [:tasks])
     if @spreadsheet_layout
       @map_info = @spreadsheet_layout
+    elsif @plate.present?
+      @map_info = @task.pick_onto_partial_plate(@requests,plate_template,@robot,@batch,@plate)
     else
-      @map_info = @task.map_wells_to_plates(@requests,plate_template,@robot,@batch,@plate)
+      @map_info = @task.pick_new_plate(@requests, plate_template, @robot, @batch, @plate_purpose)
     end
     @plates = @map_info[0]
     @source_plate_ids = @map_info[1]
@@ -55,7 +62,7 @@ module Tasks::CherrypickHandler
     @plate_cols = Map.plate_width(plate_template.size)
     @plate_rows = Map.plate_length(plate_template.size)
   end
-  
+
   def setup_input_params_for_pass_through
     @robot = Robot.find((params[:robot])["0"].to_i)
     @plate_type = params[:plate_type]
@@ -66,6 +73,7 @@ module Tasks::CherrypickHandler
     @maximum_volume = params[:maximum_volume]
     @total_nano_grams = params[:total_nano_grams]
     @cherrypick_action = params[:cherrypick][:action]
+    @plate_purpose_id = params[:plate_purpose_id]
   end
 
   def do_cherrypick_task(task, params)
@@ -79,6 +87,9 @@ module Tasks::CherrypickHandler
       unless plate_barcode.nil?
         partial_plate = Plate.find_by_barcode(plate_barcode) or raise ActiveRecord::RecordNotFound, "No plate with barcode #{plate_barcode.inspect}"
       end
+
+      # Ensure that we have a plate purpose for any plates we are creating
+      plate_purpose = PlatePurpose.find(params[:plate_purpose_id])
 
       # Configure the cherrypicking action based on the parameters
       cherrypicker = case params[:cherrypick_action]
@@ -105,12 +116,12 @@ module Tasks::CherrypickHandler
         plate = partial_plate
         if plate.nil?
           barcode = PlateBarcode.create.barcode
-          plate   = Plate.create!(:name => "Cherrypicked #{barcode}", :size => size, :barcode => barcode)
+          plate   = plate_purpose.create!(:do_not_create_wells, :name => "Cherrypicked #{barcode}", :size => size, :barcode => barcode)
         end
 
         # Set the plate type, regardless of what it was.  This may change the standard plate.
         plate.set_plate_type(plate_type) unless plate_type.nil?
- 
+
         plate_params.each do |row, row_params|
           row = row.to_i
           row_params.each do |col, request_id|
@@ -119,10 +130,10 @@ module Tasks::CherrypickHandler
               when request_id.match(/control/) then create_control_request_and_add_to_batch(task, request_id)
               else request_and_well[request_id.to_i] or raise ActiveRecord::RecordNotFound, "Cannot find request #{request_id.inspect}"
             end
- 
+
             # NOTE: Performance enhancement here
             # This collects the wells together for the plate they should be on, and modifies
-            # the values in the well data.  It *does not* save either of these, which means that 
+            # the values in the well data.  It *does not* save either of these, which means that
             # SELECT & INSERT/UPDATE are not interleaved, which affects the cache
             well.map = well_locations[Map.location_from_row_and_column(row, col.to_i+1)]
             cherrypicker.call(well, request)

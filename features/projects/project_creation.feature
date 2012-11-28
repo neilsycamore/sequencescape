@@ -74,6 +74,7 @@ Feature: Creating projects
       | Cherrypicking for Pulldown             | 0           | 0          | 0               | Request more |
       | HiSeq Paired end sequencing            | 0           | 0          | 0               | Request more |
       | Illumina-B Multiplexed Library Creation| 0           | 0          | 0               | Request more |
+      | Illumina-B STD                         | 0           | 0          | 0               | Request more |
       | Illumina-C Multiplexed Library Creation| 0           | 0          | 0               | Request more |
       | Library creation                       | 0           | 0          | 0               | Request more |
       | Multiplexed library creation           | 0           | 0          | 0               | Request more |
@@ -87,4 +88,3 @@ Feature: Creating projects
       | Pulldown library creation              | 0           | 0          | 0               | Request more |
       | Single ended hi seq sequencing         | 0           | 0          | 0               | Request more |
       | Single ended sequencing                | 0           | 0          | 0               | Request more |
-      

@@ -15,8 +15,6 @@ class ApplicationController < ActionController::Base
   # from your application log (in this case, all fields with names like "password").
   # filter_parameter_logging :password
 
-  include ExceptionNotifiable
-
   # Provide authentication, and "remember me"
   include AuthenticatedSystem
   before_filter :login_required
@@ -46,7 +44,7 @@ class ApplicationController < ActionController::Base
     new_hash
 
   end
-  
+
   private
   def sso_not_available
     flash[:warning] = I18n.t("errors.single_sign_on_unavailable")
@@ -66,7 +64,7 @@ class ApplicationController < ActionController::Base
   end
 
   def extract_header_info
-    exclude_nested_resource = request.headers["HTTP_EXCLUDE_NESTED_RESOURCE"] || params[:exclude_nested_resource] 
+    exclude_nested_resource = request.headers["HTTP_EXCLUDE_NESTED_RESOURCE"] || params[:exclude_nested_resource]
     @exclude_nested_resource = exclude_nested_resource && exclude_nested_resource.to_s.downcase == "true"
   end
 

@@ -22,7 +22,7 @@ class MapTest < ActiveSupport::TestCase
 
     context "Invalid well position" do
       {0=>nil, -1=>nil, 97=>nil, 384 => nil, "1"=>nil}.each do |position, result|
-        should "return nil for #{position}" do
+        should "return nil for #{position.inspect}" do
           assert_equal result, Map.horizontal_to_vertical(position,96)
         end
       end
@@ -88,6 +88,23 @@ class MapTest < ActiveSupport::TestCase
     should 'not remove any non-leading zeroes' do
       assert_equal Map.find_by_description_and_asset_size('A10', 96), Map.find_for_cell_location('A10', 96)
     end
+  end
+
+  context "The despcription for rows/colums" do
+
+    should 'return the expected wells for 96 well plates' do
+      assert_equal(['G1','G2','G3','G4','G5','G6','G7','G8','G9','G10','G11','G12'],Map.descriptions_for_row('G',96))
+      assert_equal(['A5','B5','C5','D5','E5','F5','G5','H5'],Map.descriptions_for_column(5,96))
+    end
+
+    should 'return the expected wells for 384 well plates' do
+
+      assert_equal(['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G9', 'G10','G11','G12',
+                    'G13','G14','G15','G16','G17','G18','G19','G20','G21','G22','G23','G24'], Map.descriptions_for_row('G',384))
+      assert_equal(['A5','B5','C5','D5','E5','F5','G5','H5',
+                    'I5','J5','K5','L5','M5','N5','O5','P5'], Map.descriptions_for_column(5,384))
+    end
+
   end
 
 end

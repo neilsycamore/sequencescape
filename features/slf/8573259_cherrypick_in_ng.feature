@@ -1,7 +1,7 @@
 @nano_grams @cherrypicking_for_pulldown @cherrypicking @barcode-service @pulldown @tecan
 Feature: Pick a ng quantity using the Tecan robot
 
-  Background: 
+  Background:
     Given I am an "manager" user logged in as "john"
 
   @gwl
@@ -41,111 +41,111 @@ Feature: Pick a ng quantity using the Tecan robot
       | Minimum Volume    | 10   |
       | Maximum Volume    | 50   |
       | Quantity to pick  | 1000 |
-    And I select "Pulldown Aliquot" from "Plate Purpose"
+    And I select "Pulldown" from "Plate Purpose"
     And I press "Next step"
     When I press "Release this batch"
     Given the last batch has a barcode of "550000555760"
     Then the downloaded tecan file for batch "550000555760" and plate "1220099999705" is
     """
     C;
-    A;SCRC1;;ABgene 0765;2;;10.0
-    D;DEST1;;ABgene 0800;1;;10.0
+    A;1220000222748;;ABgene 0765;2;;10.0
+    D;1220099999705;;ABgene 0800;1;;10.0
     W;
-    A;SCRC1;;ABgene 0765;10;;9.0
-    D;DEST1;;ABgene 0800;2;;9.0
+    A;1220000222748;;ABgene 0765;10;;9.0
+    D;1220099999705;;ABgene 0800;2;;9.0
     W;
-    A;SCRC1;;ABgene 0765;18;;8.0
-    D;DEST1;;ABgene 0800;3;;8.0
+    A;1220000222748;;ABgene 0765;18;;8.0
+    D;1220099999705;;ABgene 0800;3;;8.0
     W;
-    A;SCRC1;;ABgene 0765;26;;7.0
-    D;DEST1;;ABgene 0800;4;;7.0
+    A;1220000222748;;ABgene 0765;26;;7.0
+    D;1220099999705;;ABgene 0800;4;;7.0
     W;
-    A;SCRC1;;ABgene 0765;34;;6.0
-    D;DEST1;;ABgene 0800;5;;6.0
+    A;1220000222748;;ABgene 0765;34;;6.0
+    D;1220099999705;;ABgene 0800;5;;6.0
     W;
-    A;SCRC1;;ABgene 0765;42;;5.0
-    D;DEST1;;ABgene 0800;6;;5.0
+    A;1220000222748;;ABgene 0765;42;;5.0
+    D;1220099999705;;ABgene 0800;6;;5.0
     W;
-    A;SCRC2;;ABgene 0765;19;;30.0
-    D;DEST1;;ABgene 0800;7;;30.0
+    A;1220000333802;;ABgene 0765;19;;30.0
+    D;1220099999705;;ABgene 0800;7;;30.0
     W;
-    A;SCRC2;;ABgene 0765;27;;1.0
-    D;DEST1;;ABgene 0800;8;;1.0
+    A;1220000333802;;ABgene 0765;27;;1.0
+    D;1220099999705;;ABgene 0800;8;;1.0
     W;
-    A;SCRC2;;ABgene 0765;35;;2.0
-    D;DEST1;;ABgene 0800;9;;2.0
+    A;1220000333802;;ABgene 0765;35;;2.0
+    D;1220099999705;;ABgene 0800;9;;2.0
     W;
-    A;SCRC2;;ABgene 0765;43;;2.0
-    D;DEST1;;ABgene 0800;10;;2.0
+    A;1220000333802;;ABgene 0765;43;;2.0
+    D;1220099999705;;ABgene 0800;10;;2.0
     W;
-    A;SCRC2;;ABgene 0765;51;;2.0
-    D;DEST1;;ABgene 0800;11;;2.0
+    A;1220000333802;;ABgene 0765;51;;2.0
+    D;1220099999705;;ABgene 0800;11;;2.0
     W;
-    A;SCRC2;;ABgene 0765;59;;2.0
-    D;DEST1;;ABgene 0800;12;;2.0
+    A;1220000333802;;ABgene 0765;59;;2.0
+    D;1220099999705;;ABgene 0800;12;;2.0
     W;
-    A;SCRC2;;ABgene 0765;4;;10.0
-    D;DEST1;;ABgene 0800;13;;10.0
+    A;1220000333802;;ABgene 0765;4;;10.0
+    D;1220099999705;;ABgene 0800;13;;10.0
     W;
-    A;SCRC2;;ABgene 0765;12;;10.0
-    D;DEST1;;ABgene 0800;14;;10.0
+    A;1220000333802;;ABgene 0765;12;;10.0
+    D;1220099999705;;ABgene 0800;14;;10.0
     W;
-    A;SCRC2;;ABgene 0765;20;;15.0
-    D;DEST1;;ABgene 0800;15;;15.0
+    A;1220000333802;;ABgene 0765;20;;15.0
+    D;1220099999705;;ABgene 0800;15;;15.0
     W;
-    A;SCRC2;;ABgene 0765;28;;20.0
-    D;DEST1;;ABgene 0800;16;;20.0
+    A;1220000333802;;ABgene 0765;28;;20.0
+    D;1220099999705;;ABgene 0800;16;;20.0
     W;
     C;
     A;BUFF;;96-TROUGH;2;;1.0
-    D;DEST1;;ABgene 0800;2;;1.0
+    D;1220099999705;;ABgene 0800;2;;1.0
     W;
     A;BUFF;;96-TROUGH;3;;2.0
-    D;DEST1;;ABgene 0800;3;;2.0
+    D;1220099999705;;ABgene 0800;3;;2.0
     W;
     A;BUFF;;96-TROUGH;4;;3.0
-    D;DEST1;;ABgene 0800;4;;3.0
+    D;1220099999705;;ABgene 0800;4;;3.0
     W;
     A;BUFF;;96-TROUGH;5;;4.0
-    D;DEST1;;ABgene 0800;5;;4.0
+    D;1220099999705;;ABgene 0800;5;;4.0
     W;
     A;BUFF;;96-TROUGH;6;;5.0
-    D;DEST1;;ABgene 0800;6;;5.0
+    D;1220099999705;;ABgene 0800;6;;5.0
     W;
     A;BUFF;;96-TROUGH;8;;9.0
-    D;DEST1;;ABgene 0800;8;;9.0
+    D;1220099999705;;ABgene 0800;8;;9.0
     W;
     A;BUFF;;96-TROUGH;9;;8.0
-    D;DEST1;;ABgene 0800;9;;8.0
+    D;1220099999705;;ABgene 0800;9;;8.0
     W;
     A;BUFF;;96-TROUGH;10;;8.0
-    D;DEST1;;ABgene 0800;10;;8.0
+    D;1220099999705;;ABgene 0800;10;;8.0
     W;
     A;BUFF;;96-TROUGH;11;;8.0
-    D;DEST1;;ABgene 0800;11;;8.0
+    D;1220099999705;;ABgene 0800;11;;8.0
     W;
     A;BUFF;;96-TROUGH;12;;8.0
-    D;DEST1;;ABgene 0800;12;;8.0
+    D;1220099999705;;ABgene 0800;12;;8.0
     W;
     C;
-    C; SCRC1 = 222
-    C; SCRC2 = 333
+    C; SCRC1 = 1220000222748
+    C; SCRC2 = 1220000333802
     C;
-    C; DEST1 = 99999
+    C; DEST1 = 1220099999705
     """
     When I follow "Print worksheet for Plate 99999"
     Then I should see the cherrypick worksheet table:
-     | 1                           | 2                           | 
-     | B1        222        v10 b0 | C5        333        v2 b8  | 
-     | B2        222        v9 b1  | C6        333        v2 b8  | 
-     | B3        222        v8 b2  | C7        333        v2 b8  | 
-     | B4        222        v7 b3  | C8        333        v2 b8  | 
-     | B5        222        v6 b4  | D1        333        v10 b0 | 
-     | B6        222        v5 b5  | D2        333        v10 b0 | 
-     | C3        333        v30 b0 | D3        333        v15 b0 | 
-     | C4        333        v1 b9  | D4        333        v20 b0 | 
-     | 1                           | 2                           | 
-     
+     | 1                           | 2                           |
+     | B1        222        v10 b0 | C5        333        v2 b8  |
+     | B2        222        v9 b1  | C6        333        v2 b8  |
+     | B3        222        v8 b2  | C7        333        v2 b8  |
+     | B4        222        v7 b3  | C8        333        v2 b8  |
+     | B5        222        v6 b4  | D1        333        v10 b0 |
+     | B6        222        v5 b5  | D2        333        v10 b0 |
+     | C3        333        v30 b0 | D3        333        v15 b0 |
+     | C4        333        v1 b9  | D4        333        v20 b0 |
+     | 1                           | 2                           |
+
   Scenario: Try to cherrypick where 1 well has no concentration
     Given a plate barcode webservice is available and returns "99999"
     Given I have a plate "222" with the following wells:
@@ -164,7 +164,7 @@ Feature: Pick a ng quantity using the Tecan robot
       | Quantity to pick  | 1000 |
     And I press "Next step"
     Then I should see "Missing measured concentration for well DN222J:B2"
-  
+
    Scenario: Try to cherrypick where 1 well has no volume
      Given a plate barcode webservice is available and returns "99999"
      Given I have a plate "222" with the following wells:
@@ -183,7 +183,7 @@ Feature: Pick a ng quantity using the Tecan robot
        | Quantity to pick  | 1000 |
      And I press "Next step"
     Then I should see "Missing measured volume for well DN222J:B2"
-     
+
    Scenario Outline: Invalid picking options
      Given I have a plate "222" with the following wells:
        | well_location | measured_concentration | measured_volume |
@@ -210,4 +210,4 @@ Feature: Pick a ng quantity using the Tecan robot
        | 10             | 0.0            | 1.0       |
        | 10             | 5              | 1000      |
 
-    
+

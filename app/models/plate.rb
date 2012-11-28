@@ -3,10 +3,10 @@ class Plate < Asset
   include ModelExtensions::Plate
   include LocationAssociation::Locatable
   include Transfer::Associations
+  include Transfer::State::PlateState
   include PlatePurpose::Associations
   include Barcode::Barcodeable
-
-  SOURCE_PLATE_TYPES = ["ABgene_0765","ABgene_0800"]
+  include Asset::Ownership::Owned
 
   # The default state for a plate comes from the plate purpose
   delegate :default_state, :to => :plate_purpose, :allow_nil => true
@@ -19,7 +19,7 @@ class Plate < Asset
 
   # Transfer requests into a plate are the requests leading into the wells of said plate.
   def transfer_requests
-    wells.map(&:transfer_requests_as_target).flatten
+    wells.all(:include => :transfer_requests_as_target).map(&:transfer_requests_as_target).flatten
   end
 
   def self.derived_classes
@@ -35,7 +35,7 @@ class Plate < Asset
     # tables to find all of the child plates of our parent that have the same plate purpose, numbering
     # those rows to give the iteration number for each plate.
     iteration_of_plate = connection.select_one(%Q{
-      SELECT iteration 
+      SELECT iteration
       FROM (
         SELECT iteration_plates.id, @rownum:=@rownum+1 AS iteration
         FROM (
@@ -78,6 +78,20 @@ WHERE c.container_id=?
       AssetLink.import([:direct, :count, :ancestor_id, :descendant_id], links_data.map { |c| [true,1,*c] }, :validate => false)
       WellAttribute.import([:well_id, :created_at, :updated_at], links_data.map { |c| [c.last, time_now, time_now] }, :validate => false, :timestamps => false)
     end
+    private :post_import
+
+    def post_connect(well)
+#      AssetLink.create!(:ancestor => proxy_owner, :descendant => well)
+    end
+    private :post_connect
+
+    def construct!
+      Map.where_plate_size(proxy_owner.size).in_row_major_order.map do |location|
+        create!(:map => location)
+      end.tap do |wells|
+        AssetLink::Job.create(proxy_owner, wells)
+      end
+    end
 
     def map_from_locations
       {}.tap do |location_to_well|
@@ -107,6 +121,10 @@ WHERE c.container_id=?
     def walk_in_row_major_order(&block)
       self.in_row_major_order.each { |well| yield(well, well.map.row_order) }
     end
+
+    def in_preferred_order
+      proxy_owner.plate_purpose.in_preferred_order(self)
+    end
   end
 
   named_scope :include_wells_and_attributes, { :include => { :wells => [ :map, :well_attribute ] } }
@@ -119,7 +137,7 @@ WHERE c.container_id=?
 
   before_create :set_plate_name_and_size
 
-  named_scope :qc_started_plates, lambda { 
+  named_scope :qc_started_plates, lambda {
     {
       :select => "distinct assets.*",
       :order => 'assets.id DESC',
@@ -193,7 +211,7 @@ WHERE c.container_id=?
   def find_well_by_name(well_name)
     self.wells.position_name(well_name, self.size).first
   end
-  alias :find_well_by_map_description :find_well_by_name 
+  alias :find_well_by_map_description :find_well_by_name
 
   def plate_header
     rows = [""]
@@ -235,23 +253,13 @@ WHERE c.container_id=?
   end
 
   def stock_plate_name
-    if self.get_plate_type == "Stock Plate" || self.get_plate_type.blank?
-      return SOURCE_PLATE_TYPES.first
-    end
-    self.get_plate_type
+    (self.get_plate_type == "Stock Plate" || self.get_plate_type.blank?) ? PlatePurpose.cherrypickable_as_source.first.name : self.get_plate_type
   end
 
   def control_well_exists?
-    wells.each do |well|
-      request = Request.find_by_target_asset_id(well.id)
-      unless request.nil?
-        source_well = request.asset
-        if source_well.parent.is_a?(ControlPlate)
-          return true
-        end
-      end
-    end
-    false
+		Request.into_by_id(well_ids).any? do |request|
+			request.asset.plate.is_a?(ControlPlate)
+		end
   end
 
   # A plate has a sample with the specified name if any of its wells have that sample.
@@ -384,7 +392,7 @@ WHERE c.container_id=?
 
     true
   end
-  
+
   # Should return true if any samples on the plate contains gender information
   def contains_gendered_samples?
     wells.any? do |well|
@@ -400,12 +408,6 @@ WHERE c.container_id=?
       self.events.create!(:message => I18n.t('studies.submissions.plate.event.failed', :barcode => self.barcode), :created_by => user.login)
       study.errors.add("plate_barcode", "Couldnt create submission for plate #{plate_barcode}")
     end
-  end
-
-  # <b>DEPRECATED:</b> Please use <tt>Plate::SOURCE_PLATE_TYPES</tt> instead.
-  def self.source_plate_types
-    ActiveSupport::Deprecation.warn "Plate.source_plate_types is deprecated. Please use Plate::SOURCE_PLATE_TYPES instead."
-    SOURCE_PLATE_TYPES
   end
 
   def create_sample_tubes
@@ -447,13 +449,7 @@ WHERE c.container_id=?
   end
 
   def lookup_stock_plate
-    self.parents.each do |parent_plate|
-      next unless parent_plate.is_a?(Plate)     # TODO: Do we need this?
-      return parent_plate if parent_plate.stock_plate?
-      parent_stock = parent_plate.send(:lookup_stock_plate)
-      return parent_stock if parent_stock.present?
-    end
-    nil
+    self.ancestors.all(:order => 'created_at DESC', :include => :plate_purpose).detect(&:stock_plate?)
   end
   private :lookup_stock_plate
 
@@ -521,7 +517,7 @@ WHERE c.container_id=?
   def default_plate_size
     DEFAULT_SIZE
   end
-  
+
   def move_study_sample(study_from, study_to, current_user)
     study_from.events.create(
       :message => "Plate #{self.id} was moved to Study #{study_to.id}",
@@ -574,5 +570,14 @@ WHERE c.container_id=?
       :suffix => self.parent.try(:barcode),
       :prefix => self.barcode_prefix.prefix
     )
+  end
+
+  # This method returns a map from the wells on the plate to their stock well.
+  def stock_wells
+    # Optimisation: if the plate is a stock plate then it's wells are it's stock wells!
+    return Hash[wells.with_pool_id.map { |w| [w,[w]] }] if stock_plate?
+    Hash[wells.with_pool_id.map { |w| [w, w.stock_wells] }.reject { |_,v| v.empty? }].tap do |stock_wells_hash|
+      raise "No stock plate associated with #{id}" if stock_wells_hash.empty?
+    end
   end
 end

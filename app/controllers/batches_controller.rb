@@ -1,4 +1,6 @@
 class BatchesController < ApplicationController
+  include XmlCacheHelper::ControllerHelper
+
   before_filter :login_required, :except => [:released, :evaluations_counter, :qc_criteria]
   before_filter :find_batch_by_id, :only => [:show,:edit, :update, :destroy, :qc_information, :qc_batch, :save, :fail, :fail_items, :assign_batch, :control, :add_control, :remove_request, :print_labels, :print_plate_labels, :print_multiplex_labels, :print, :verify, :verify_tube_layout, :reset_batch, :previous_qc_state, :filtered, :swap, :download_spreadsheet, :gwl_file, :pulldown_batch_report, :pacbio_sample_sheet, :sample_prep_worksheet]
   before_filter :find_batch_by_batch_id, :only => [:sort, :print_multiplex_barcodes, :print_pulldown_multiplex_tube_labels, :print_plate_barcodes, :print_barcodes]
@@ -37,7 +39,7 @@ class BatchesController < ApplicationController
 
     respond_to do |format|
       format.html
-      format.xml  { render :layout => false }
+      format.xml { cache_xml_response(@batch) }
     end
   end
 
@@ -396,7 +398,7 @@ class BatchesController < ApplicationController
   def print_stock_labels
     @batch = Batch.find(params[:id])
   end
-  
+
   def print_plate_labels
     @pipeline = @batch.pipeline
     @output_barcodes = []
@@ -425,7 +427,7 @@ class BatchesController < ApplicationController
       if ! request.target_asset.nil? && ! request.target_asset.children.empty?
         # We are trying to find the MX library tube or the stock MX library
         # tube. I've added a filter so it doesn't pick up Lanes.
-        children = request.target_asset.children.last.children.select { |a| a.is_a?(Tube) } 
+        children = request.target_asset.children.last.children.select { |a| a.is_a?(Tube) }
         if children.empty?
           @asset = request.target_asset.children.last
         else
@@ -439,23 +441,23 @@ class BatchesController < ApplicationController
     end
     # @assets = @batch.multiplexed_items_with_unique_library_ids
   end
-  
+
   def print_stock_multiplex_labels
     @batch = Batch.find(params[:id])
     request = @batch.requests.first
     pooled_library = request.target_asset.children.first
     stock_multiplexed_tube = nil
-    
+
     if pooled_library.is_a_stock_asset?
       stock_multiplexed_tube = pooled_library
     elsif pooled_library.has_stock_asset?
       stock_multiplexed_tube = pooled_library.stock_asset
     end
-    
+
     if stock_multiplexed_tube.nil?
       flash[:notice] = "There is no stock multiplexed library available."
       redirect_to :controller => 'batches', :action => 'show', :id => @batch.id
-    else  
+    else
       @asset = stock_multiplexed_tube
     end
   end
@@ -537,7 +539,7 @@ class BatchesController < ApplicationController
               identifier = stock.barcode
               label = stock.name
             end
-          else  
+          else
             if @batch.multiplexed?
               unless request.tag_number.nil?
                 label = "(#{request.tag_number}) #{request.target_asset.id}"
@@ -667,15 +669,15 @@ class BatchesController < ApplicationController
   end
 
   def download_spreadsheet
-    csv_string = CherrypickTask.generate_spreadsheet(@batch)
+    csv_string = Tasks::PlateTemplateHandler.generate_spreadsheet(@batch)
     send_data csv_string, :type => "text/plain",
      :filename=>"#{@batch.id}_cherrypick_layout.csv",
      :disposition => 'attachment'
   end
 
   def gwl_file
-    @plate_barcode = @batch.plate_barcode(params[:barcode])  
-    tecan_gwl_file_as_string = @batch.tecan_gwl_file_as_text(@plate_barcode, 
+    @plate_barcode = @batch.plate_barcode(params[:barcode])
+    tecan_gwl_file_as_string = @batch.tecan_gwl_file_as_text(@plate_barcode,
                                                              @batch.total_volume_to_cherrypick,
                                                              params[:plate_type])
     send_data tecan_gwl_file_as_string, :type => "text/plain",
@@ -705,7 +707,7 @@ class BatchesController < ApplicationController
       else
         unless @batch.requests.first.target_asset.children.empty?
           multiplexed_library = @batch.requests.first.target_asset.children.first
-  
+
           if  ! multiplexed_library.has_stock_asset? && ! multiplexed_library.is_a_stock_asset?
             @batch_assets = [multiplexed_library]
           else
@@ -723,47 +725,47 @@ class BatchesController < ApplicationController
       end
     end
   end
-  
+
   def edit_volume_and_concentration
     @batch = Batch.find(params[:id])
   end
-  
+
   def update_volume_and_concentration
     @batch = Batch.find(params[:batch_id])
-    
+
     params[:assets].each do |id, values|
       asset = Asset.find(id)
       asset.volume = values[:volume]
       asset.concentration = values[:concentration]
       asset.save
     end
-    
+
     redirect_to batch_path(@batch)
   end
-  
+
   def pulldown_batch_report
     csv_string = @batch.pulldown_batch_report
     send_data csv_string, :type => "text/plain",
      :filename=>"batch_#{@batch.id}_report.csv",
      :disposition => 'attachment'
-    
+
   end
-  
+
   def pacbio_sample_sheet
     csv_string = PacBio::SampleSheet.new.create_csv_from_batch(@batch)
     send_data csv_string, :type => "text/plain",
      :filename=>"batch_#{@batch.id}_sample_sheet.csv",
      :disposition => 'attachment'
   end
-  
+
   def sample_prep_worksheet
     csv_string = PacBio::Worksheet.new.create_csv_from_batch(@batch)
     send_data csv_string, :type => "text/plain",
      :filename=>"batch_#{@batch.id}_worksheet.csv",
      :disposition => 'attachment'
   end
-  
-  
+
+
   def find_batch_by_barcode
     batch_id = LabEvent.find_by_barcode(params[:id])
     if batch_id == 0
@@ -775,7 +777,7 @@ class BatchesController < ApplicationController
       render :action => "show"
     end
   end
-  
+
   private
   def pipeline_error_on_batch_creation(message)
     respond_to do |format|

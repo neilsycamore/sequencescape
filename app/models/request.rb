@@ -28,9 +28,36 @@ class Request < ActiveRecord::Base
     named_scope :for_pipeline, lambda { |pipeline|
       {
         :joins => [ 'LEFT JOIN pipelines_request_types prt ON prt.request_type_id=requests.request_type_id' ],
-        :conditions => [ 'prt.pipeline_id=?', pipeline.id]
+        :conditions => [ 'prt.pipeline_id=?', pipeline.id],
+        :readonly => false
       }
     }
+
+  named_scope :for_pooling_of, lambda { |plate|
+    joins =
+      if plate.stock_plate?
+        [ 'INNER JOIN assets AS pw ON requests.asset_id=pw.id' ]
+      else
+        [
+          'INNER JOIN well_links ON well_links.source_well_id=requests.asset_id',
+          'INNER JOIN assets AS pw ON well_links.target_well_id=pw.id AND well_links.type="stock"',
+        ]
+      end
+    {
+      :select => 'uuids.external_id AS pool_id, GROUP_CONCAT(DISTINCT pw_location.description SEPARATOR ",") AS pool_into, requests.*',
+      :joins => joins + [
+        'INNER JOIN maps AS pw_location ON pw.map_id=pw_location.id',
+        'INNER JOIN container_associations ON container_associations.content_id=pw.id',
+        'INNER JOIN submissions ON requests.submission_id=submissions.id',
+        'INNER JOIN uuids ON uuids.resource_id=submissions.id AND uuids.resource_type="Submission"'
+      ],
+      :group => 'submissions.id',
+      :conditions => [
+        'requests.sti_type NOT IN (?) AND container_associations.container_id=?',
+        [TransferRequest,*Class.subclasses_of(TransferRequest)].map(&:name), plate.id
+      ]
+    }
+  }
 
   belongs_to :pipeline
   belongs_to :item
@@ -45,9 +72,13 @@ class Request < ActiveRecord::Base
   delegate :billable?, :to => :request_type, :allow_nil => true
   belongs_to :workflow, :class_name => "Submission::Workflow"
 
+  named_scope :for_billing, :include => [ :initial_project, :request_type, { :target_asset => :aliquots } ]
+
   belongs_to :user
 
   belongs_to :submission
+
+  named_scope :with_request_type_id, lambda { |id| { :conditions => { :request_type_id => id } } }
 
   # project is read only so we can set it everywhere
   # but it will be only used in specific and controlled place
@@ -100,6 +131,7 @@ class Request < ActiveRecord::Base
   #  validates_presence_of :study, :request_type#TODO, :submission
 
   named_scope :between, lambda { |source,target| { :conditions => { :asset_id => source.id, :target_asset_id => target.id } } }
+  named_scope :into_by_id, lambda { |target_ids| { :conditions => { :target_asset_id => target_ids } } }
 
   # TODO: Really need to be consistent in who our named scopes behave
   named_scope :request_type, lambda { |request_type|
@@ -124,7 +156,7 @@ class Request < ActiveRecord::Base
 
   #Asset are Locatable (or at least some of them)
   belongs_to :location_association, :primary_key => :locatable_id, :foreign_key => :asset_id
-  named_scope :located, lambda {|location_id| { :joins => :location_association, :conditions =>  ['location_associations.location_id = ?', location_id ] } }
+  named_scope :located, lambda {|location_id| { :joins => :location_association, :conditions =>  ['location_associations.location_id = ?', location_id ], :readonly => false } }
 
   #Use container location
   named_scope :holder_located, lambda { |location_id|
@@ -158,8 +190,9 @@ class Request < ActiveRecord::Base
     target = options[:by_target] ? 'target_asset_id' : 'asset_id'
 
     send(finder_method, options.slice(:group).merge(
-      :select  => "requests.*, tca.container_id AS container_id, tca.content_id AS content_id",
+      :select  => "DISTINCT requests.*, tca.container_id AS container_id, tca.content_id AS content_id",
       :joins   => "INNER JOIN container_associations tca ON tca.content_id=#{target}",
+      :readonly => false,
       :include => :request_metadata
     ))
   end
@@ -390,5 +423,10 @@ class Request < ActiveRecord::Base
   def has_quota?(number)
     #no if one project doesn't have the quota
     not quotas.map(&:project).any? {|p| p.has_quota?(request_type_id, number) == false}
+  end
+
+  # Adds any pool information to the structure so that it can be reported to client applications
+  def update_pool_information(pool_information)
+    # Does not need anything here
   end
 end

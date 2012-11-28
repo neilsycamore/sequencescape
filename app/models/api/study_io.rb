@@ -40,8 +40,11 @@ class Api::StudyIO < Api::Base
     json_attributes["abbreviation"] = object.abbreviation
 
     object.roles.each do |role|
-      json_attributes[role.name.downcase.gsub(/\s+/, '_')] = role.users.map do |user|
-        { :login => user.login, :email => user.email, :name  => user.name }
+      json_attributes[role.name.downcase.gsub(/\s+/, '_')] = role.user_role_bindings.map do |user_role|
+        { :login => user_role.user.login, :email => user_role.user.email, :name  => user_role.user.name }.tap do
+          json_attributes['updated_at'] ||= user_role.updated_at
+          json_attributes['updated_at']   = user_role.updated_at if json_attributes['updated_at'] < user_role.updated_at
+        end
       end
     end if object.respond_to?(:roles)
   end
@@ -50,7 +53,7 @@ class Api::StudyIO < Api::Base
     with_association(:faculty_sponsor, :lookup_by => :name) do
       map_attribute_to_json_attribute(:name, 'sac_sponsor')
     end
-    
+
     with_association(:reference_genome, :lookup_by => :name) do
       map_attribute_to_json_attribute(:name, 'reference_genome')
     end
@@ -60,7 +63,7 @@ class Api::StudyIO < Api::Base
     with_association(:study_type, :lookup_by => :name) do
       map_attribute_to_json_attribute(:name                    , 'study_type')
     end
-    
+
     map_attribute_to_json_attribute(:study_project_id, 'ena_project_id')
     map_attribute_to_json_attribute(:study_study_title, 'study_title')
     map_attribute_to_json_attribute(:study_sra_hold, 'study_visibility')
@@ -71,6 +74,7 @@ class Api::StudyIO < Api::Base
     with_association(:data_release_study_type, :lookup_by => :name ) do
       map_attribute_to_json_attribute(:name                    , 'data_release_sort_of_study')
     end
+    map_attribute_to_json_attribute(:remove_x_and_autosomes?, 'remove_x_and_autosomes')
 
     map_attribute_to_json_attribute(:data_release_strategy)
     map_attribute_to_json_attribute(:ega_dac_accession_number)

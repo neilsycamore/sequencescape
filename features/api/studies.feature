@@ -45,6 +45,7 @@ Feature: Access studies through the API
 
           "contaminated_human_dna": "No",
           "contains_human_dna": "No",
+          "remove_x_and_autosomes": false,
           "commercially_available": "No",
           "data_release_sort_of_study": "genomic sequencing",
           "data_release_strategy": "open",
@@ -72,9 +73,6 @@ Feature: Access studies through the API
               "create_for_tubes": "http://www.example.com/api/1/00000000-1111-2222-3333-444444444444/sample_manifests/create_for_tubes"
             }
           }
-        },
-        "uuids_to_ids": {
-          "00000000-1111-2222-3333-444444444444": 1
         }
       }
       """

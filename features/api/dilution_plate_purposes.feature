@@ -15,7 +15,7 @@ Feature: Access dilution plate purposes through the API
 
     Given no plate purposes exist
 
-  @read 
+  @read
   Scenario: Reading the JSON for a UUID
     Given the dilution plate purpose exists with ID 1
     And the UUID for the dilution plate purpose with ID 1 is "00000000-1111-2222-3333-444444444444"
@@ -38,9 +38,6 @@ Feature: Access dilution plate purposes through the API
               "read": "http://www.example.com/api/1/00000000-1111-2222-3333-444444444444/plates"
             }
           }
-        },
-        "uuids_to_ids": {
-          "00000000-1111-2222-3333-444444444444": 1
         }
       }
       """

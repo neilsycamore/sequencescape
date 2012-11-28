@@ -3,12 +3,20 @@
 # "moderator" for an instance of a model (i.e., an object), a model class,
 # or without any specification at all.
 class Role < ActiveRecord::Base
-  has_and_belongs_to_many :users
+  class UserRole < ActiveRecord::Base
+    set_table_name('roles_users')
+    belongs_to :role
+    belongs_to :user
+  end
+
+  has_many :user_role_bindings, :class_name => 'Role::UserRole'
+  has_many :users, :through => :user_role_bindings, :source => :user
+
   belongs_to :authorizable, :polymorphic => true
 
   validates_presence_of :name
   named_scope :general_roles, :conditions => "authorizable_type IS NULL"
-  
+
   def self.keys
     Role.all.map { |r| r.name }.uniq
   end
@@ -49,7 +57,7 @@ class Role < ActiveRecord::Base
       end
 
       def has_many_users_through_roles(name)
-        define_method(name.to_s.pluralize.to_sym) do 
+        define_method(name.to_s.pluralize.to_sym) do
           role = self.roles.find_by_name(name.to_s.singularize)
           role.nil? ? [] : role.users
         end

@@ -21,29 +21,30 @@ Feature: display an overview of all plates going through QC in SLF
    Scenario: A plate has only had a dilution plates created
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
      Given plate "1221234567841" is part of study "Test study"
      Given I am on the sample logistics homepage
      When I follow "QC overview"
      Then the overview of the plates should look like:
        | Study      | Stock   | QC started        | Pico Analysed | Gel Analysed | Sequenom Stamp |
-       | Test Study | 1234567 | 2011-02-14        |               |              |                |       
+       | Test Study | 1234567 | 2011-02-14        |               |              |                |
      Given I am on the Qc reports homepage
- 		 When I select "Test Study" from "Study"
+      When I select "Test Study" from "Study"
      And I press "Submit"
- 		 Given 1 pending delayed jobs are processed
- 		 And I am on the Qc reports homepage
- 		 When I follow "Download report for Test Study"
-  	 Then I should see the report for "Test Study":
+      Given 1 pending delayed jobs are processed
+      And I am on the Qc reports homepage
+      When I follow "Download report for Test Study"
+     Then I should see the report for "Test Study":
        | Well | QC started date |
        | A1   | 2011-02-14      |
-  
+
 
    @barcode-service
    Scenario: A plate has had pico assays created but not analysed
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
+     Then I create a "Pico dilution" from plate "6251234567836"
      Then I create a "Pico Assay Plates" from plate "4361234567667"
      Given I am on the sample logistics homepage
      When I follow "QC overview"
@@ -55,7 +56,8 @@ Feature: display an overview of all plates going through QC in SLF
    Scenario: A plate has had pico assays and has been analysed
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
+     Then I create a "Pico dilution" from plate "6251234567836"
      Then I create a "Pico Assay Plates" from plate "4361234567667"
      Given plate "1221234567841" has had pico analysis results uploaded
      Given I am on the sample logistics homepage
@@ -68,7 +70,7 @@ Feature: display an overview of all plates going through QC in SLF
    Scenario: A plate has only completed Gel
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
      Then I create a "Gel Dilution Plates" from plate "6251234567836"
      Given plate "1221234567841" has gel analysis results
      Given I am on the sample logistics homepage
@@ -81,7 +83,8 @@ Feature: display an overview of all plates going through QC in SLF
    Scenario: A plate hasnt had a sequenom plate generated
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
+     Then I create a "Pico dilution" from plate "6251234567836"
      Then I create a "Pico Assay Plates" from plate "4361234567667"
      Then I create a "Gel Dilution Plates" from plate "6251234567836"
      Given plate "1221234567841" has gel analysis results
@@ -99,7 +102,8 @@ Feature: display an overview of all plates going through QC in SLF
 
      When I follow "SLF Lab view"
      And I follow "Print plate barcodes"
-     Then I create a "Dilution Plates" from plate "1221234567841"
+     Then I create a "Working dilution" from plate "1221234567841"
+     Then I create a "Pico dilution" from plate "6251234567836"
      Then I create a "Pico Assay Plates" from plate "4361234567667"
      Then I create a "Gel Dilution Plates" from plate "6251234567836"
      Given I am on the sample logistics homepage
@@ -118,17 +122,17 @@ Feature: display an overview of all plates going through QC in SLF
      Then the overview of the plates should look like:
      | Study      | Stock   | QC started        | Pico Analysed | Gel Analysed | Sequenom Stamp |
      | Test Study | 1234567 | 2011-02-14        | 2011-02-14    | 2011-02-14   | 2011-02-14     |
-     
+
      Given I am on the Qc reports homepage
- 		 When I select "Test Study" from "Study"
+      When I select "Test Study" from "Study"
      And I press "Submit"
- 		 Given 2 pending delayed jobs are processed
- 		 And I am on the Qc reports homepage
- 		 When I follow "Download report for Test Study"
-  	 Then I should see the report for "Test Study":
-       | Well | QC started date | Seq stamp date | 
-       | A1   | 2011-02-14      | 2011-02-14     | 
-  
+      Given 2 pending delayed jobs are processed
+      And I am on the Qc reports homepage
+      When I follow "Download report for Test Study"
+     Then I should see the report for "Test Study":
+       | Well | QC started date | Seq stamp date |
+       | A1   | 2011-02-14      | 2011-02-14     |
+
 
   @new-api @asset_audit @single-sign-on
   Scenario: A plate has been scanned as received in the audit application

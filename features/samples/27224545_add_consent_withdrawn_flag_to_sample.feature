@@ -3,7 +3,7 @@ Feature: Patients should be able to withdraw consent
   So as to track withdraw of consent
   Samples should be able to be flagged as withdrawn
   This should be presented to downstream users
-  
+
   Background:
     Given all of this is happening at exactly "2010-Sep-08 09:00:00+01:00"
     And I am an "Manager" user logged in as "user"
@@ -23,15 +23,15 @@ Feature: Patients should be able to withdraw consent
     And I should not see "sample_okay" within ".withdrawn"
     When I am on the show page for sample "sample_okay"
     Then I should not see "Patient consent has been withdrawn for this sample."
-    When I am on the show page for sample "sample_withdrawn" 
+    When I am on the show page for sample "sample_withdrawn"
     Then I should see "Patient consent has been withdrawn for this sample."
-  
+
   Scenario: Withdrawn consent is visible in sample xml
     When I get the XML for the sample "sample_okay"
     Then the text of the as is XML element "//sample/consent_withdrawn" should be "false"
     When I get the XML for the sample "sample_withdrawn"
     Then the text of the as is XML element "//sample/consent_withdrawn" should be "true"
-    
+
   @batch
   Scenario: Withdrawn consent is visible in batch xml
     Given the batch exists with ID 1
@@ -39,7 +39,7 @@ Feature: Patients should be able to withdraw consent
     And batch "1" in "Pulldown library preparation" has been setup with "sample_okay_group" for feature 27224545
     When I get the XML for the batch "1"
     Then the value of the "consent_withdrawn" attribute of the XML element "//batch/lanes/lane/library/sample" should be "false"
-    
+
     Given the batch exists with ID 2
     And the UUID for the batch with ID 2 is "00000000-1111-2222-3333-666666666666"
     And batch "2" in "Pulldown library preparation" has been setup with "sample_withdrawn_group" for feature 27224545
@@ -52,7 +52,7 @@ Feature: Patients should be able to withdraw consent
     And the UUID for the sample "sample_okay" is "00000000-1111-2222-4444-555555555555"
     And the sanger sample id for sample "00000000-1111-2222-4444-444444444444" is "1STDY123"
     And the sanger sample id for sample "00000000-1111-2222-4444-555555555555" is "1STDY124"
-    
+
     When I GET the API path "/samples/00000000-1111-2222-4444-444444444444"
     And ignoring "id|updated_at" the JSON should be:
     """
@@ -142,7 +142,7 @@ Feature: Patients should be able to withdraw consent
 
   @submission
   Scenario: Submissions can not be created containing withdrawn samples
-  Given I try to create a "Cherrypicking for Pulldown - Pulldown Multiplex Library Preparation - Paired end sequencing" order with the following setup:
+  Given I try to create a "Illumina-C Multiplexed Library Creation - Single ended sequencing" order with the following setup:
     | Project                     | Project A              |
     | Study                       | Study A                |
     | Asset Group                 | sample_withdrawn_group |
@@ -154,7 +154,7 @@ Feature: Patients should be able to withdraw consent
   And the last error should contain "Samples in this submission have had patient consent withdrawn."
   When I try to save the order
   Then the order should not be built
-  Given I try to create a "Cherrypicking for Pulldown - Pulldown Multiplex Library Preparation - Paired end sequencing" order with the following setup:
+  Given I try to create a "Illumina-C Multiplexed Library Creation - Single ended sequencing" order with the following setup:
     | Project                     | Project A              |
     | Study                       | Study A                |
     | Asset                       | sample_withdrawn_tube  |
@@ -166,7 +166,7 @@ Feature: Patients should be able to withdraw consent
   And the last error should contain "Samples in this submission have had patient consent withdrawn."
   When I try to save the order
   Then the order should not be built
-  Given I try to create a "Cherrypicking for Pulldown - Pulldown Multiplex Library Preparation - Paired end sequencing" order with the following setup:
+  Given I try to create a "Illumina-C Multiplexed Library Creation - Single ended sequencing" order with the following setup:
     | Project                     | Project A              |
     | Study                       | Study A                |
     | Asset Group                 | sample_okay_group |
@@ -177,7 +177,7 @@ Feature: Patients should be able to withdraw consent
   And the order should not have errors
   When I try to save the order
   Then the order should be built
-  Given I try to create a "Cherrypicking for Pulldown - Pulldown Multiplex Library Preparation - Paired end sequencing" order with the following setup:
+  Given I try to create a "Illumina-C Multiplexed Library Creation - Single ended sequencing" order with the following setup:
     | Project                     | Project A              |
     | Study                       | Study A                |
     | Asset                       | sample_okay_tube       |

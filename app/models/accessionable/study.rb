@@ -41,7 +41,7 @@ module Accessionable
       error_list = []
       error_list + @related_studies.map(&:errors)
     end
-    
+
     def xml
       xml = Builder::XmlMarkup.new
       xml.instruct!
@@ -89,8 +89,8 @@ module Accessionable
     end
 
     def update_accession_number!(user, accession_number)
-      add_updated_event(user, "Study #{@study.id}", @study) if @accession_number
       @accession_number = accession_number
+      add_updated_event(user, "Study #{@study.id}", @study) if @accession_number
       @study.study_metadata.study_ebi_accession_number = accession_number
       @study.save!
     end
@@ -113,7 +113,7 @@ module Accessionable
     def to_send?
       db_label.present?
     end
-    
+
     def errors
       [].tap do |errs|
         errs << "Accession number needed for related study #{@study.name}" if @study.ebi_accession_number.blank?

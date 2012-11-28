@@ -13,7 +13,7 @@ development:
     array_express_accession_login:
     asset_audits_url: http://localhost:3014/process_plates/new
     auth_cookie:
-    authentication: 'ldap'
+    authentication: local
     barcode_images_url: http://localhost:10000
     barcode_prefix: CT
     barcode_service_url: http://localhost:9998/barcode_service.wsdl
@@ -59,8 +59,13 @@ development:
     sequencing_admin_email: admin@example.com
     api:
       authorisation_code: development
+      flush_response_at: 32768
 
 test: &TEST
+    amqp:
+      url: amqp://localhost:5672/
+      persistent: false
+      burst_size: 1000
     accession_login: "accession_login"
     accession_url: http://localhost:9999/accession_service/
     accession_view_url: http://localhost:9999/view_accession/
@@ -110,6 +115,7 @@ test: &TEST
     sequencing_admin_email: admin@example.com
     api:
       authorisation_code: cucumber
+      flush_response_at: 32768
 
 cucumber:
     <<: *TEST

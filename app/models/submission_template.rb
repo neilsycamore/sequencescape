@@ -1,4 +1,4 @@
-# It associates a name to a pre-filled submission (subclass) and a serialized set of attributes 
+# It associates a name to a pre-filled submission (subclass) and a serialized set of attributes
 # We could have use a Prototype Factory , and so just associate a name to existing submission
 # but that doesn't work because the submission prototype doesn't pass the validation stage.
 # Anyway that's basically a prototype factory
@@ -6,16 +6,42 @@ class SubmissionTemplate < ActiveRecord::Base
   include Uuid::Uuidable
 
   validates_presence_of :name
-  validates_uniqueness_of :name
   validates_presence_of :submission_class_name
 
   serialize :submission_parameters
-  acts_as_audited :on => [:destroy, :update]
+
 
   has_many :orders
   belongs_to :product_line
 
-  named_scope :visible, :order => 'product_line_id ASC', :conditions => { :visible => true }
+  has_many   :supercedes,    :class_name => 'SubmissionTemplate', :foreign_key => :superceded_by_id
+  belongs_to :superceded_by, :class_name => 'SubmissionTemplate', :foreign_key => :superceded_by_id
+
+  LATEST_VERSION = -1
+  SUPERCEDED_BY_UNKNOWN_TEMPLATE = -2
+
+  named_scope :hidden, :order => 'product_line_id ASC', :conditions => [ 'superceded_by_id != ?', LATEST_VERSION ]
+  named_scope :visible, :order => 'product_line_id ASC', :conditions => { :superceded_by_id => LATEST_VERSION }
+
+  def visible
+    self.superceded_by_id == LATEST_VERSION
+  end
+
+  def superceded_by_unknown!
+    self.superceded_by_id = SUPERCEDED_BY_UNKNOWN_TEMPLATE
+  end
+
+  def supercede(&block)
+    ActiveRecord::Base.transaction do
+      self.clone.tap do |cloned|
+        yield(cloned) if block_given?
+        name, cloned.name = cloned.name, "Superceding #{cloned.name}"
+        cloned.save!
+        self.update_attributes!(:superceded_by_id => cloned.id, :superceded_at => Time.now)
+        cloned.update_attributes!(:name => name)
+      end
+    end
+  end
 
   def create_and_build_submission!(attributes)
     Submission.build!(attributes.merge(:template => self))
@@ -23,7 +49,7 @@ class SubmissionTemplate < ActiveRecord::Base
   def create_order!(attributes)
     self.new_order(attributes).tap do |order|
       yield(order) if block_given?
-      order.save! 
+      order.save!
     end
   end
 
@@ -90,19 +116,19 @@ class SubmissionTemplate < ActiveRecord::Base
 
   def submission_class
     klass = submission_class_name.constantize
-    #TODO[mb14] Hack. This is to avoid to have to rename it in database or seen 
+    #TODO[mb14] Hack. This is to avoid to have to rename it in database or seen
     #The hack is not needed for subclasses as they inherits from Order
     klass == Submission ? Order  : klass
   end
 
-  private 
+  private
 
   def self.unserialize(object)
     if object.respond_to? :map
       return object.map { |o| unserialize(o) }
     elsif object.is_a?(YAML::Object)
       return object.class.constantize.new(object.ivars)
-    else 
+    else
       return object
     end
   end

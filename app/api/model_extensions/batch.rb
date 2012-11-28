@@ -24,7 +24,7 @@ module ModelExtensions::Batch
           { :target_asset => [ :uuid_object, :barcode_prefix, { :aliquots => [ :sample, :tag ] } ] }
         ]
       }
-      
+
       after_create :generate_target_assets_for_requests, :if => :need_target_assets_on_requests?
       before_save :manage_downstream_requests
     end
@@ -34,26 +34,6 @@ module ModelExtensions::Batch
     pipeline.manage_downstream_requests(self)
   end
   private :manage_downstream_requests
-
-  # Cancels downstream requests of this batch based on the determination of the block.  A request
-  # is passed to the block and it then returns a determination.  If that is :none then all subsequent
-  # requests of this request are cancelled; if it's nil then none of them are; and if it's a number
-  # then that number are kept, any others are cancelled.
-  def keep_downstream_requests(&block)
-    requests.each do |request|
-      amount_to_keep     = yield(request)
-      requests_to_cancel = request.next_requests(pipeline)
-
-      requests_to_cancel = 
-        case amount_to_keep
-        when nil   then []
-        when :none then requests_to_cancel
-        else requests_to_cancel.slice(amount_to_keep, requests_to_cancel.length) || []
-        end
-
-      requests_to_cancel.map(&:cancel!)
-    end
-  end
 
   def generate_target_assets_for_requests
     requests_to_update, asset_links = [], []
@@ -78,11 +58,10 @@ module ModelExtensions::Batch
       #request.start!
 
       # All links between the two assets as new, so we can bulk create them!
-      asset_links << AssetLink.build_edge(request.asset, request.target_asset)
-
+      asset_links << [request.asset.id, request.target_asset.id]
     end
 
-    AssetLink.import(asset_links, :validate => false) unless asset_links.empty?
+    AssetLink::BuilderJob.create(asset_links)
 
     Request.import(
       [ :id, :asset_id ],
@@ -99,7 +78,7 @@ module ModelExtensions::Batch
   end
 
   def need_target_assets_on_requests?
-    pipeline.asset_type.present? and pipeline.request_types.detect { |rt| rt.target_asset_type.blank? }.present?
+    pipeline.asset_type.present? and pipeline.request_types.detect(&:needs_target_asset?).present?
   end
   private :need_target_assets_on_requests?
 end

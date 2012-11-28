@@ -3,6 +3,7 @@ require "rexml/document"
 class StudiesController < ApplicationController
   include REXML
   include Informatics::Globals
+  include XmlCacheHelper::ControllerHelper
 
   before_filter :login_required
   before_filter :admin_login_required, :only => [:new_plate_submission, :create_plate_submission, :settings, :administer, :manage, :managed_update, :grant_role, :remove_role]
@@ -14,7 +15,8 @@ class StudiesController < ApplicationController
     if logged_in? and not exclude_nested_resource
       @alternatives = [
         "interesting", "followed", "managed & active", "managed & inactive",
-        "pending", "pending ethical approval", "contaminated with human dna", "active", "inactive", "collaborations", "all"
+        "pending", "pending ethical approval", "contaminated with human dna",
+        "remove x and autosomes", "active", "inactive", "collaborations", "all"
       ]
       @studies = studies_from_scope(@alternatives[params[:scope].to_i])
     elsif params[:project_id] && !(project = Project.find(params[:project_id])).nil?
@@ -84,7 +86,7 @@ class StudiesController < ApplicationController
           redirect_to study_workflow_path(@study, current_user.workflow)
         end
       end
-      format.xml
+      format.xml { cache_xml_response(@study) }
       format.json { render :json => @study.to_json }
     end
   end
@@ -178,7 +180,7 @@ class StudiesController < ApplicationController
 
     #TODO create a proper ReversedStudyRelation
     @relations = @study.study_relations.map { |r| [r.related_study, r.name ] } +
-      @study.reversed_study_relations.map { |r| [r.study, r.reversed_name ] } 
+      @study.reversed_study_relations.map { |r| [r.study, r.reversed_name ] }
 
   end
 
@@ -436,22 +438,22 @@ class StudiesController < ApplicationController
      @study = Study.find(params[:id])
      @projects = @study.projects.paginate :page => params[:page]
    end
-   
+
    def sample_manifests
      @study = Study.find(params[:id])
      @sample_manifests = @study.sample_manifests.paginate(:page => params[:page])
    end
-   
+
    def suppliers
      @study = Study.find(params[:id])
      @suppliers = @study.suppliers.paginate(:page => params[:page])
    end
-     
+
    def study_reports
      @study = Study.find(params[:id])
-     @study_reports = StudyReport.paginate(:conditions => ["study_id=?",@study.id],  :page => params[:page], :order => "id desc")
+     @study_reports = StudyReport.without_files.for_study(@study).paginate(:page => params[:page], :order => 'id DESC')
    end
-   
+
 
   private
 
@@ -471,6 +473,7 @@ class StudiesController < ApplicationController
     when "pending"                     then Study.is_pending
     when "pending ethical approval"    then Study.all_awaiting_ethical_approval
     when "contaminated with human dna" then Study.all_contaminated_with_human_dna
+    when "remove x and autosomes"      then Study.all_with_remove_x_and_autosomes
     when "active"                      then Study.is_active
     when "inactive"                    then Study.is_inactive
     when "collaborations"              then Study.collaborated_with(current_user)

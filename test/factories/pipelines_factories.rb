@@ -145,7 +145,7 @@ Factory.define :pipeline, :class => Pipeline do |p|
   p.next_pipeline_id      nil
   p.previous_pipeline_id  nil
   p.location              {|location| location.association(:location)}
-  p.after_build          do |pipeline| 
+  p.after_build          do |pipeline|
     pipeline.request_types << Factory(:request_type )
     pipeline.add_control_request_type
     pipeline.build_workflow(:name => pipeline.name, :item_limit => 2, :locale => 'Internal') if pipeline.workflow.nil?
@@ -177,7 +177,7 @@ Factory.define :library_creation_pipeline do |p|
 
   p.after_build do |pipeline|
     pipeline.request_types << Factory(:request_type )
-    pipeline.add_control_request_type    
+    pipeline.add_control_request_type
     pipeline.build_workflow(:name => pipeline.name, :locale => 'Internal')
   end
 end
@@ -192,7 +192,7 @@ Factory.define :pulldown_library_creation_pipeline do |p|
 
   p.after_build do |pipeline|
     pipeline.request_types << Factory(:request_type )
-    pipeline.add_control_request_type    
+    pipeline.add_control_request_type
     pipeline.build_workflow(:name => pipeline.name, :locale => 'Internal')
   end
 end
@@ -238,11 +238,11 @@ Factory.define :request_information_type do |w|
   w.name                   ""
   w.key                    ""
   w.label                  ""
-  w.hide_in_inbox          ""    
+  w.hide_in_inbox          ""
 end
 
 Factory.define :pipeline_request_information_type do |prit|
-  prit.pipeline                  {|pipeline| pipeline.association(:pipeline)}   
+  prit.pipeline                  {|pipeline| pipeline.association(:pipeline)}
   prit.request_information_type  {|request_information_type| request_information_type.association(:request_information_type)}
 end
 
@@ -328,6 +328,7 @@ Factory.define :empty_sample_tube, :class => SampleTube do |sample_tube|
   sample_tube.qc_state            ""
   sample_tube.resource            nil
   sample_tube.barcode             {|a| Factory.next :barcode_number }
+  sample_tube.purpose             Tube::Purpose.standard_sample_tube
 end
 Factory.define :sample_tube, :parent => :empty_sample_tube do |sample_tube|
   sample_tube.after_create do |sample_tube|
@@ -351,6 +352,11 @@ end
 
 Factory.define :plate_purpose do |plate_purpose|
   plate_purpose.name    "Frag"
+end
+
+Factory.define(:tube_purpose, :class => Tube::Purpose) do |purpose|
+  purpose.name        'Tube purpose'
+  purpose.target_type 'MultiplexedLibraryTube'
 end
 
 Factory.define :dilution_plate_purpose do |plate_purpose|

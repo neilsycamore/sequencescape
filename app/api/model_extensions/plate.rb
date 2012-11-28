@@ -12,19 +12,7 @@ module ModelExtensions::Plate
       :wells => [
         :map,
         :transfer_requests_as_target,
-        :uuid_object, {
-          :aliquots => [
-            :bait_library, {
-              :tag => :tag_group,
-              :sample => [
-                :uuid_object, {
-                  :primary_study   => { :study_metadata => :reference_genome },
-                  :sample_metadata => :reference_genome
-                }
-              ]
-            }
-          ]
-        }
+        :uuid_object
       ]
     }
   ]
@@ -46,8 +34,10 @@ module ModelExtensions::Plate
   # ignored within the returned result.
   def pools
     ActiveSupport::OrderedHash.new.tap do |pools|
-      wells.walk_in_pools do |pool_id, wells|
-        pools[pool_id] = wells.map(&:map).map(&:description).compact unless pool_id.blank?
+      Request.include_request_metadata.for_pooling_of(self).each do |request|
+        pools[request.pool_id] = { :wells => request.pool_into.split(',') }.tap do |pool_information|
+          request.update_pool_information(pool_information)
+        end unless request.pool_id.nil?
       end
     end
   end

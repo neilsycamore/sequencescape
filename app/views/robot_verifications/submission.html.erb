@@ -1,5 +1,5 @@
 <% add :menu, "Sample Logistics homepage" => lab_sample_logistics_path %>
-<% form_for :robot_verifications, :url => {:action => "download"} do |f| %> 
+<% form_for :robot_verifications, :url => {:action => "download"} do |f| %>
 <h2>Step 2 of 3: Scan robot beds and plates</h2>
 
 <table class="bed_verification" id="source_beds">
@@ -9,12 +9,12 @@
     <th>Scanned robot beds</th>
     <th>Plate ID</th>
     <th>Scanned plates</th>
-		<th>Plate type</th>
-		</tr>
+    <th>Plate type</th>
+    </tr>
   </thead>
   <tbody>
   <% if @all_labels.last.nil? -%>
-	<tr><td>No source plates found for this batch</td></tr>
+  <tr><td>No source plates found for this batch</td></tr>
   <% else -%>
     <% count = 0%>
     <% @all_labels.last.sort{ |a,b| a[1].to_i <=> b[1].to_i }.each do |plate_label, bed_label| %>
@@ -28,13 +28,13 @@
          <%   next_field = "bed_barcodes_#{bed_label.to_i + 1}" %>
         <% end %>
         <td><%= text_field_tag "plate_barcodes[#{plate_label}]", display_hash_value(params, :plate_barcodes, "#{plate_label}"), :onkeypress => "return disable_cr_and_change_focus(event,'plate_barcodes_#{plate_label}','#{next_field}')" %></td>
-        <td><%= select_tag("source_plate_types[#{plate_label}]", options_for_select(Plate::SOURCE_PLATE_TYPES)) %></td>
+        <td><%= select_tag("source_plate_types[#{plate_label}]", options_for_select(PlatePurpose.cherrypickable_as_source.map(&:name))) %></td>
       </tr>
     <% count = count +1 %>
     <% end %>
   <% end %>
   <% if @all_labels.first.nil? -%>
-	<tr><td>No destination plates found for this batch</tr></td>
+  <tr><td>No destination plates found for this batch</tr></td>
   <% else -%>
     <% @all_labels.first.sort.each do |destination_label, bed_label| %>
     <tr class="destination">
@@ -47,7 +47,7 @@
        <%   next_field = "destination_bed_barcodes_#{bed_label.to_i +1}" %>
       <% end %>
       <td><%= text_field_tag "destination_plate_barcodes[#{destination_label}]", display_hash_value(params,  :destination_plate_barcodes, "#{destination_label}"), :onkeypress => "return disable_cr_and_change_focus(event,'destination_plate_barcodes_#{destination_label}','#{next_field}')" %></td>
-			<td><%= Plate::SOURCE_PLATE_TYPES.last %></td>
+      <td><%= PlatePurpose.cherrypickable_default_type.first.name %></td>
     </tr>
     <% end %>
   <% end %>
@@ -56,7 +56,7 @@
 </table>
 
 <div align="center">
-  <br>Buffer added 
+  <br>Buffer added
   <%= check_box_tag "buffer_added" %>
   <br>
   <br>

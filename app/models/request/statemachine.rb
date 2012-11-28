@@ -6,8 +6,66 @@ module Request::Statemachine
   QUOTA_COUNTED   = [ 'passed', 'pending', 'blocked', 'started' ]
   QUOTA_EXEMPTED  = [ 'failed', 'cancelled', 'aborted' ]
 
+  # Bit of an ugly reproduction of the state machine, but shan't be in here for long.
+  TRANSITIONS = {
+    'started' => {
+      'passed' => :pass!,
+      'cancelled' => :cancel!,
+      'failed' => :fail!
+    },
+    'pending' =>{
+      'started' => :start!,
+      'cancelled' => :cancel_before_started!,
+      'hold' => :hold!,
+      'blocked' => :block!
+    },
+    'passed' => {
+      'failed' => :change_decision!,
+      'pending' => :return!,
+      'cancelled' => :cancel_completed!
+    },
+    'cancelled' => {
+      'pending' => :detach!
+    },
+    'failed' => {
+      'passed' => :change_decision!,
+      'pending' => :return!,
+      'cancelled' => :cancel_completed!
+    },
+    'hold' => {
+      'started' => :start!,
+      'pending' => :reset!,
+      'cancelled' => :cancel!
+    },
+    'blocked' => {
+      'pending' => :unblock!
+    }
+  }
+
+  module ClassMethods
+    def redefine_state_machine(&block)
+      # Destroy all evidence of the statemachine we've inherited!  Ugly, but it works!
+      instance_variable_set(:@aasm, nil)
+      AASM::StateMachine[self] = AASM::StateMachine.new('')
+      instance_eval(&block)
+    end
+
+    # Determines the most likely event that should be fired when transitioning between the two states.  If there is
+    # only one option then that is what is returned, otherwise an exception is raised.
+    def suggested_transition_between(current, target)
+      aasm_events.select do |name, event|
+        event.transitions_from_state(current.to_sym).any? do |transition|
+          transition.to == target.to_sym
+        end
+      end.tap do |events|
+        raise StandardError, "No obvious transition from #{current.inspect} to #{target.inspect}" unless events.size == 1
+      end.first.first
+    end
+  end
+
   def self.included(base)
     base.class_eval do
+      extend ClassMethods
       include Request::BillingStrategy
 
       ## State machine
@@ -102,6 +160,16 @@ module Request::Statemachine
     end
   end
 
+  def transition_to(target_state)
+    method = transition_method_to(target_state)
+    raise AASM::InvalidTransition, "Can not transition from #{state} to #{target_state}" if method.nil?
+    self.send(method)
+  end
+
+  def transition_method_to(target_state)
+    TRANSITIONS[state][target_state]
+  end
+  private :transition_method_to
   #--
   # These are the callbacks that will be made on entry to a given state.  This allows
   # derived classes to override these and add custom behaviour.  You are advised to call
@@ -157,5 +225,9 @@ module Request::Statemachine
 
   def open?
     ["pending", "started"].include?(self.state)
+  end
+
+  def transition_to(target_state)
+    send("#{self.class.suggested_transition_between(self.state, target_state)}!")
   end
 end
